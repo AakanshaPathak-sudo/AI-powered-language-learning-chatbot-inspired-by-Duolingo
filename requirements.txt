@@ -1,5 +1,8 @@
-# Used by Streamlit Cloud and anyone running `streamlit run` from the repo root.
-# Full stack (API + scrape + FAISS): also install backend/requirements.txt
+# Streamlit Cloud + local: full RAG in-process (no separate FastAPI required for the UI).
 streamlit>=1.28.0
-httpx>=0.26.0
 python-dotenv>=1.0.0
+pydantic-settings>=2.0.0
+sentence-transformers>=2.2.0
+groq>=0.4.0
+faiss-cpu>=1.7.4
+numpy>=1.24.0

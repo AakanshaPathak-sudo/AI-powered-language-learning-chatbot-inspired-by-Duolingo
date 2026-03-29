@@ -1,21 +1,23 @@
 """
-Streamlit UI for the RAG chatbot (calls the FastAPI backend).
+Streamlit UI for the RAG chatbot — full pipeline in-process (FAISS + sentence-transformers + Groq).
 
 Duolingo-inspired dark lesson layout (independent demo; not affiliated with Duolingo).
 
     streamlit run streamlit_app.py
 
-Environment:
-    RAG_API_BASE — default http://127.0.0.1:8000
+Environment (see `.env.example`):
+    GROQ_API_KEY — required for chat completions
+    Optional: GROQ_MODEL, SENTENCE_TRANSFORMER_MODEL, DATA_DIR, TOP_K_RETRIEVAL, etc.
 """
 
 from __future__ import annotations
 
-import os
+import logging
+import sys
+import uuid
 from pathlib import Path
 from typing import Any
 
-import httpx
 import streamlit as st
 
 try:
@@ -25,7 +27,18 @@ try:
 except ImportError:
     pass
 
-DEFAULT_API = "http://127.0.0.1:8000"
+# Backend package lives in ./backend (app.config resolves data/ relative to repo root).
+_ROOT = Path(__file__).resolve().parent
+_BACKEND = _ROOT / "backend"
+if str(_BACKEND) not in sys.path:
+    sys.path.insert(0, str(_BACKEND))
+
+from app.config import get_settings  # noqa: E402
+from app.services.chat_log import append_chat_record, build_record  # noqa: E402
+from app.services.chat_pipeline import run_rag_turn  # noqa: E402
+from app.services.retrieval import FaissRetriever  # noqa: E402
+
+logger = logging.getLogger(__name__)
 
 # Palette inspired by Duolingo-style lesson UI (educational homage only).
 C_BG = "#131f24"
@@ -240,26 +253,19 @@ def render_lesson_header(message_count: int) -> None:
     )
 
 
-def get_api_base() -> str:
-    return os.environ.get("RAG_API_BASE", DEFAULT_API).rstrip("/")
-
-
-def post_chat(api_base: str, query: str, timeout: float = 120.0) -> dict[str, Any]:
-    url = f"{api_base}/chat"
-    with httpx.Client(timeout=timeout) as client:
-        r = client.post(url, json={"query": query})
-        r.raise_for_status()
-        return r.json()
-
-
-def fetch_health(api_base: str) -> dict[str, Any] | None:
+@st.cache_resource
+def load_rag_resources() -> dict[str, Any]:
+    """Load settings, FAISS index, and chunk metadata once per process."""
+    settings = get_settings()
+    retriever = FaissRetriever(settings)
     try:
-        with httpx.Client(timeout=10.0) as client:
-            r = client.get(f"{api_base}/health")
-            r.raise_for_status()
-            return r.json()
-    except Exception:
-        return None
+        retriever.load()
+    except FileNotFoundError as e:
+        return {"ok": False, "error": str(e), "settings": settings, "retriever": None}
+    except Exception as e:
+        logger.exception("Failed to load retriever")
+        return {"ok": False, "error": repr(e), "settings": settings, "retriever": None}
+    return {"ok": True, "error": None, "settings": settings, "retriever": retriever}
 
 
 def main() -> None:
@@ -283,26 +289,29 @@ def main() -> None:
             }
         ]
 
+    rag = load_rag_resources()
+    settings = rag["settings"]
+
     n_msgs = len(st.session_state.messages)
     render_lesson_header(n_msgs)
 
     with st.sidebar:
-        st.markdown("### ⚙️ API")
-        api_default = get_api_base()
-        api_base = st.text_input(
-            "RAG API base URL",
-            value=api_default,
-            help="FastAPI root, e.g. https://your-api.run.app",
-        )
-        if st.button("CHECK CONNECTION", use_container_width=True):
-            h = fetch_health(api_base.rstrip("/"))
-            if h:
-                st.success("OK — index_loaded: " + str(h.get("index_loaded")))
-                st.json(h)
-            else:
-                st.error("Could not reach /health.")
+        st.markdown("### ⚙️ RAG")
+        st.caption("Runs locally in this app (FAISS + embeddings + Groq).")
+        if rag["ok"]:
+            st.success("Search index loaded.")
+            st.text(f"Data: {settings.data_dir}")
+            st.text(f"Model: {settings.sentence_transformer_model}")
+        else:
+            st.error("Search index not available.")
+            st.code(rag.get("error", "unknown"), language="text")
 
-    api = api_base.rstrip("/")
+    if not rag["ok"]:
+        st.warning(
+            "**Vector index missing or unreadable.** Build it from the repo root:\n\n"
+            "`python scripts/build_index.py`\n\n"
+            "Ensure `data/index.faiss` and `data/chunks_meta.json` exist (commit them for Streamlit Cloud if needed)."
+        )
 
     for msg in st.session_state.messages:
         av = "🦉" if msg["role"] == "assistant" else "🙂"
@@ -316,41 +325,86 @@ def main() -> None:
 
         with st.chat_message("assistant", avatar="🦉"):
             with st.spinner("Checking…"):
-                try:
-                    data = post_chat(api, prompt)
-                    answer = data.get("answer", "")
-                    sources = data.get("sources") or []
-                    st.markdown(answer)
-                    if sources:
-                        with st.expander("Sources"):
-                            for s in sources:
-                                title = s.get("title") or s.get("source_url", "")
-                                url = s.get("source_url", "")
-                                if url:
-                                    st.markdown(f"- [{title}]({url})")
-                                else:
-                                    st.markdown(f"- {title}")
-                        src_lines = ["**Sources:**"]
-                        for s in sources:
-                            t = s.get("title") or ""
-                            u = s.get("source_url", "")
-                            src_lines.append(f"- [{t}]({u})" if u else f"- {t}")
-                        to_store = answer + "\n\n" + "\n".join(src_lines)
-                    else:
-                        to_store = answer
-                    st.session_state.messages.append({"role": "assistant", "content": to_store})
-                except httpx.HTTPStatusError as e:
-                    detail = e.response.json().get("detail", str(e))
-                    err = f"**API error** ({e.response.status_code}): {detail}"
-                    st.error(err)
-                    st.session_state.messages.append({"role": "assistant", "content": err})
-                except httpx.RequestError as e:
+                record_id = str(uuid.uuid4())
+                retriever = rag["retriever"]
+
+                if not rag["ok"] or retriever is None:
                     err = (
-                        f"**Connection error**: {e!s}. "
-                        "Start the API or set **RAG API base URL** in the sidebar."
+                        "**Search index not loaded.** Run `python scripts/build_index.py` and ensure "
+                        "`data/index.faiss` and `data/chunks_meta.json` are present."
                     )
                     st.error(err)
+                    append_chat_record(
+                        settings,
+                        build_record(
+                            query=prompt,
+                            error="Search index not loaded.",
+                            record_id=record_id,
+                        ),
+                    )
                     st.session_state.messages.append({"role": "assistant", "content": err})
+                elif not prompt.strip():
+                    err = "**Query must not be empty.**"
+                    st.error(err)
+                    append_chat_record(
+                        settings,
+                        build_record(query=prompt, error="Query must not be empty.", record_id=record_id),
+                    )
+                    st.session_state.messages.append({"role": "assistant", "content": err})
+                else:
+                    try:
+                        data = run_rag_turn(prompt.strip(), retriever, settings)
+                        answer = data.answer
+                        sources = [s.model_dump() for s in data.sources]
+                        st.markdown(answer)
+                        if sources:
+                            with st.expander("Sources"):
+                                for s in sources:
+                                    title = s.get("title") or s.get("source_url", "")
+                                    url = s.get("source_url", "")
+                                    if url:
+                                        st.markdown(f"- [{title}]({url})")
+                                    else:
+                                        st.markdown(f"- {title}")
+                            src_lines = ["**Sources:**"]
+                            for s in sources:
+                                t = s.get("title") or ""
+                                u = s.get("source_url", "")
+                                src_lines.append(f"- [{t}]({u})" if u else f"- {t}")
+                            to_store = answer + "\n\n" + "\n".join(src_lines)
+                        else:
+                            to_store = answer
+                        append_chat_record(
+                            settings,
+                            build_record(
+                                query=prompt.strip(),
+                                answer=answer,
+                                sources=sources,
+                                record_id=record_id,
+                            ),
+                        )
+                        st.session_state.messages.append({"role": "assistant", "content": to_store})
+                    except ValueError as e:
+                        err = f"**Configuration error:** {e}"
+                        st.error(err)
+                        append_chat_record(
+                            settings,
+                            build_record(query=prompt.strip(), error=str(e), record_id=record_id),
+                        )
+                        st.session_state.messages.append({"role": "assistant", "content": err})
+                    except Exception as e:
+                        logger.exception("RAG pipeline failed")
+                        err = f"**Pipeline error:** {e!s}"
+                        st.error(err)
+                        append_chat_record(
+                            settings,
+                            build_record(
+                                query=prompt.strip(),
+                                error=f"Pipeline error: {e!s}",
+                                record_id=record_id,
+                            ),
+                        )
+                        st.session_state.messages.append({"role": "assistant", "content": err})
 
 
 if __name__ == "__main__":

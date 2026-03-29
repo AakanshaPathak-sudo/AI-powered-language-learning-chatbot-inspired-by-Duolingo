@@ -18,6 +18,10 @@ build/
 /data/chunks_meta.json
 /data/chat_log.jsonl
 
+# Allow committing built index + metadata for Streamlit Cloud (optional; remove these lines to keep local-only).
+!/data/index.faiss
+!/data/chunks_meta.json
+
 # Node
 frontend/node_modules/
 frontend/dist/

@@ -163,17 +163,16 @@ VITE_API_BASE=http://127.0.0.1:8000 npm run dev
 
 ### 6. Streamlit UI (alternative)
 
-With the **same** FastAPI server running on port **8000**, from the **repository root**:
+The Streamlit app runs the **full RAG pipeline in-process** (FAISS, sentence-transformers, Groq). No separate FastAPI process is required for this UI. From the **repository root**:
 
 ```bash
-# venv active — root file is enough for Streamlit only; use backend/requirements.txt for the full stack
 pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
-Opens **http://localhost:8501** by default. Sidebar: set **RAG API base URL** or export `RAG_API_BASE` (e.g. `http://127.0.0.1:8000`). Uses `httpx` server-side — no CORS setup needed for Streamlit.
+Opens **http://localhost:8501** by default. Set **`GROQ_API_KEY`** in `.env` (or environment). Ensure **`data/index.faiss`** and **`data/chunks_meta.json`** exist (`python scripts/build_index.py` after scraping).
 
-**Streamlit Community Cloud:** The repo includes a root **`requirements.txt`** so Cloud can install `streamlit`, `httpx`, and `python-dotenv`. Set **Main file path** to `streamlit_app.py` and add **`RAG_API_BASE`** in app secrets to your deployed FastAPI URL (the API must be reachable from the internet).
+**Streamlit Community Cloud:** Use **`requirements.txt`** at the repo root, **Main file path** `streamlit_app.py`, and add **`GROQ_API_KEY`** (and optional overrides) in **App secrets**. Commit **`data/index.faiss`** and **`data/chunks_meta.json`** (they are un-ignored in `.gitignore` so you can track them) so retrieval works on Cloud. The first run may download the embedding model weights (~90MB for `all-MiniLM-L6-v2`).
 
 The Streamlit UI uses a **dark “lesson-style” layout** (progress bar, green actions, purple accents) as an educational homage only; this project is **not** affiliated with Duolingo.
 
@@ -187,11 +186,11 @@ The Streamlit UI uses a **dark “lesson-style” layout** (progress bar, green 
 | `TOP_K_RETRIEVAL` | Default: `5` retrieved chunks |
 | `CHAT_LOG_ENABLED` | Default: `true` — append each chat turn to a file |
 | `CHAT_LOG_PATH` | Filename under `data/` — default: `chat_log.jsonl` |
-| `RAG_API_BASE` | Streamlit → API root; default `http://127.0.0.1:8000` |
+| `DATA_DIR` | Optional override for the `data/` folder path |
 
 ### Chat transcript logging
 
-Each `/chat` request is appended as **one JSON object per line** (JSON Lines) to `data/chat_log.jsonl` (configurable). Successful turns include `id`, `timestamp` (UTC ISO-8601), `query`, `answer`, and `sources`. Failed turns include `query` and `error` instead of an answer. Logging errors never block the API response.
+Each successful or failed chat turn from the **API** or **Streamlit** is appended as **one JSON object per line** (JSON Lines) to `data/chat_log.jsonl` (configurable). Successful turns include `id`, `timestamp` (UTC ISO-8601), `query`, `answer`, and `sources`. Failed turns include `query` and `error` instead of an answer. Logging errors never block the response.
 
 Treat this file as potentially sensitive; it is **gitignored** by default. For multiple server processes or heavy concurrency, consider moving to a proper database (e.g. SQLite or Postgres) and a single writer.
 
