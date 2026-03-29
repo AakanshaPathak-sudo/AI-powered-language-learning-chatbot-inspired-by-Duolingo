@@ -57,6 +57,7 @@ The page [https://www.duolingo.com/help](https://www.duolingo.com/help) is a dyn
 
 ```
 project/
+├── requirements.txt             # Streamlit Cloud + minimal Streamlit local deps
 ├── backend/
 │   ├── app/
 │   │   ├── main.py              # FastAPI app, CORS, lifespan
@@ -165,11 +166,14 @@ VITE_API_BASE=http://127.0.0.1:8000 npm run dev
 With the **same** FastAPI server running on port **8000**, from the **repository root**:
 
 ```bash
-# venv active; pip install -r backend/requirements.txt
+# venv active — root file is enough for Streamlit only; use backend/requirements.txt for the full stack
+pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
 Opens **http://localhost:8501** by default. Sidebar: set **RAG API base URL** or export `RAG_API_BASE` (e.g. `http://127.0.0.1:8000`). Uses `httpx` server-side — no CORS setup needed for Streamlit.
+
+**Streamlit Community Cloud:** The repo includes a root **`requirements.txt`** so Cloud can install `streamlit`, `httpx`, and `python-dotenv`. Set **Main file path** to `streamlit_app.py` and add **`RAG_API_BASE`** in app secrets to your deployed FastAPI URL (the API must be reachable from the internet).
 
 ## Configuration
 

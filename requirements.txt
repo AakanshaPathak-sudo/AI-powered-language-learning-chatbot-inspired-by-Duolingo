@@ -1,0 +1,5 @@
+# Used by Streamlit Cloud and anyone running `streamlit run` from the repo root.
+# Full stack (API + scrape + FAISS): also install backend/requirements.txt
+streamlit>=1.28.0
+httpx>=0.26.0
+python-dotenv>=1.0.0
