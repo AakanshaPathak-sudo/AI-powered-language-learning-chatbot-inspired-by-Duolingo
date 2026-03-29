@@ -1,0 +1,9 @@
+{
+  "meta": {
+    "scraped_at": "2026-03-29T00:00:00+00:00",
+    "disclaimer": "Schema only. Populate with: python scripts/scrape_help.py",
+    "token_encoding": "cl100k_base",
+    "chunk_token_range": [300, 500]
+  },
+  "chunks": []
+}

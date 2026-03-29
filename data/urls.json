@@ -1,0 +1,10 @@
+{
+  "urls": [
+    { "url": "https://www.duolingo.com/info", "kind": "standard" },
+    { "url": "https://www.duolingo.com/approach", "kind": "standard" },
+    { "url": "https://www.duolingo.com/efficacy", "kind": "standard" },
+    { "url": "https://blog.duolingo.com/handbook/", "kind": "standard" },
+    { "url": "https://design.duolingo.com", "kind": "standard" },
+    { "url": "https://www.duolingo.com/help", "kind": "help_faq" }
+  ]
+}
