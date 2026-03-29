@@ -73,12 +73,18 @@ def inject_theme_css() -> None:
             cursor: default;
             opacity: 0.5;
             width: 2rem;
+            flex-shrink: 0;
         }}
         .duo-logo {{
-            letter-spacing: 0.02em;
+            flex: 1;
+            min-width: 0;
+            text-align: center;
+            letter-spacing: 0.01em;
             color: {C_TEXT};
-            font-size: 0.95rem;
-            text-transform: lowercase;
+            font-size: clamp(1.05rem, 3.8vw, 1.55rem);
+            font-weight: 800;
+            line-height: 1.2;
+            padding: 0 0.35rem;
         }}
         .duo-streak {{
             display: flex;
@@ -87,6 +93,7 @@ def inject_theme_css() -> None:
             font-size: 0.9rem;
             font-weight: 700;
             color: {C_GOLD};
+            flex-shrink: 0;
         }}
 
         .duo-progress-track {{
@@ -220,7 +227,7 @@ def render_lesson_header(message_count: int) -> None:
         f"""
         <div class="duo-top-bar">
             <span class="duo-close">×</span>
-            <span class="duo-logo">help hub</span>
+            <span class="duo-logo">Duolingo Inspired RAG Chatbot</span>
             <span class="duo-streak">⚡ <span>RAG</span></span>
         </div>
         <div class="duo-progress-track">
@@ -257,7 +264,7 @@ def fetch_health(api_base: str) -> dict[str, Any] | None:
 
 def main() -> None:
     st.set_page_config(
-        page_title="Help hub — RAG chat",
+        page_title="Duolingo Inspired RAG Chatbot",
         page_icon="🦉",
         layout="centered",
         initial_sidebar_state="collapsed",
