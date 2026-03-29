@@ -19,7 +19,7 @@ flowchart LR
     G[Groq LLM]
     E --> F --> G
   end
-  subgraph ui [React frontend]
+  subgraph ui [React or Streamlit]
     Chat[Chat UI]
   end
   JSON -.-> E
@@ -30,7 +30,7 @@ flowchart LR
 1. **Phase 1 — Scraping:** Curated URLs from `data/urls.json` (or built-in defaults) are scraped one by one—**standard pages** use Playwright **`inner_text()`** on `main` / `article` / `[role="main"]` (with `#root`/`body` fallbacks and nav/footer stripped in-page); **`/help`** uses Playwright to expand each FAQ, wait for answer text, then read visible text. Output is chunked to ~300–500 tokens (`tiktoken`) into `data/processed.json` as `{ title, content, url }` rows.
 2. **Phase 2 — Embeddings & FAISS:** **sentence-transformers** (`all-MiniLM-L6-v2` by default) runs locally; vectors are L2-normalized for **FAISS** `IndexFlatIP` (cosine via inner product).
 3. **Phase 3 — RAG:** Embed the user query → retrieve top-k chunks → **Groq** chat completion with a prompt that enforces summarization and no verbatim copying.
-4. **Phase 4 — Frontend:** Vite + React chat UI; optional source links from retrieval metadata.
+4. **Phase 4 — Frontend:** Vite + React chat UI, or **Streamlit** (`streamlit_app.py`) talking to the same API; optional source links from retrieval metadata.
 
 ## Data Sources
 
@@ -69,6 +69,8 @@ project/
 │   │       ├── rag.py           # Groq prompt + completion
 │   │       └── chat_log.py      # JSONL transcript logging
 │   └── requirements.txt
+├── streamlit_app.py             # Streamlit UI (optional)
+├── .streamlit/config.toml       # Streamlit theme / server defaults
 ├── frontend/                    # Vite + React
 │   ├── src/App.jsx
 │   └── ...
@@ -88,7 +90,7 @@ project/
 ## Prerequisites
 
 - Python **3.10+** recommended (3.9 may work).
-- Node **18+** for the frontend.
+- Node **18+** if you use the Vite React frontend (optional if you only use Streamlit).
 - API key: **Groq** for chat ([console](https://console.groq.com/)). Embeddings use a **local** model (no embedding API).
 - **Playwright** browser (installed via `playwright install chromium` after pip install).
 
@@ -158,6 +160,17 @@ To point the UI at another API base URL:
 VITE_API_BASE=http://127.0.0.1:8000 npm run dev
 ```
 
+### 6. Streamlit UI (alternative)
+
+With the **same** FastAPI server running on port **8000**, from the **repository root**:
+
+```bash
+# venv active; pip install -r backend/requirements.txt
+streamlit run streamlit_app.py
+```
+
+Opens **http://localhost:8501** by default. Sidebar: set **RAG API base URL** or export `RAG_API_BASE` (e.g. `http://127.0.0.1:8000`). Uses `httpx` server-side — no CORS setup needed for Streamlit.
+
 ## Configuration
 
 | Variable | Purpose |
@@ -168,6 +181,7 @@ VITE_API_BASE=http://127.0.0.1:8000 npm run dev
 | `TOP_K_RETRIEVAL` | Default: `5` retrieved chunks |
 | `CHAT_LOG_ENABLED` | Default: `true` — append each chat turn to a file |
 | `CHAT_LOG_PATH` | Filename under `data/` — default: `chat_log.jsonl` |
+| `RAG_API_BASE` | Streamlit → API root; default `http://127.0.0.1:8000` |
 
 ### Chat transcript logging
 

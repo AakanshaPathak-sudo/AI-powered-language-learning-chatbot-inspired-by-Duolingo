@@ -1,0 +1,7 @@
+# Streamlit UI defaults (optional). Override in ~/.streamlit/config.toml if you prefer.
+
+[theme]
+primaryColor = "#58cc02"
+
+[browser]
+gatherUsageStats = false
