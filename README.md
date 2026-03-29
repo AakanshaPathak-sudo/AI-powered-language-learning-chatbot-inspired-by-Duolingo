@@ -2,6 +2,8 @@
 
 Independent educational project: a **Retrieval-Augmented Generation (RAG)** chatbot that answers questions using **publicly visible** help content from [Duolingo’s Help Center](https://www.duolingo.com/help). This project is **not affiliated with Duolingo**.
 
+**Live Streamlit demo:** [https://duolingo-inspired-rag-chatbot.streamlit.app/](https://duolingo-inspired-rag-chatbot.streamlit.app/)
+
 ## Architecture
 
 ```mermaid
@@ -162,6 +164,8 @@ VITE_API_BASE=http://127.0.0.1:8000 npm run dev
 ```
 
 ### 6. Streamlit UI (alternative)
+
+**Deployed app:** [https://duolingo-inspired-rag-chatbot.streamlit.app/](https://duolingo-inspired-rag-chatbot.streamlit.app/)
 
 The Streamlit app runs the **full RAG pipeline in-process** (FAISS, sentence-transformers, Groq). No separate FastAPI process is required for this UI. From the **repository root**:
 
