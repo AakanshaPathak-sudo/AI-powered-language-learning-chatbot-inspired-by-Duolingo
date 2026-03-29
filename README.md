@@ -175,6 +175,8 @@ Opens **http://localhost:8501** by default. Sidebar: set **RAG API base URL** or
 
 **Streamlit Community Cloud:** The repo includes a root **`requirements.txt`** so Cloud can install `streamlit`, `httpx`, and `python-dotenv`. Set **Main file path** to `streamlit_app.py` and add **`RAG_API_BASE`** in app secrets to your deployed FastAPI URL (the API must be reachable from the internet).
 
+The Streamlit UI uses a **dark “lesson-style” layout** (progress bar, green actions, purple accents) as an educational homage only; this project is **not** affiliated with Duolingo.
+
 ## Configuration
 
 | Variable | Purpose |

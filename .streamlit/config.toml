@@ -1,7 +1,11 @@
-# Streamlit UI defaults (optional). Override in ~/.streamlit/config.toml if you prefer.
+# Aligns with streamlit_app.py Duolingo-inspired lesson theme (demo only).
 
 [theme]
-primaryColor = "#58cc02"
+primaryColor = "#78c800"
+backgroundColor = "#131f24"
+secondaryBackgroundColor = "#202f36"
+textColor = "#f7f7f7"
+font = "sans serif"
 
 [browser]
 gatherUsageStats = false
