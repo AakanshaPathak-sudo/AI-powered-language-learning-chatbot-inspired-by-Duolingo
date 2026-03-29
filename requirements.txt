@@ -1,6 +1,8 @@
 # Streamlit Cloud + local: full RAG in-process (no separate FastAPI required for the UI).
+# pydantic + pydantic-settings: required by backend/app/config.py (explicit pins for Cloud pip).
 streamlit>=1.28.0
 python-dotenv>=1.0.0
+pydantic>=2.0.0,<3
 pydantic-settings>=2.0.0
 sentence-transformers>=2.2.0
 groq>=0.4.0
